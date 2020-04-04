@@ -83,7 +83,7 @@ class GameEngine{
     commitWorkerMoves(){
         /**
          * Handles the resource collection phase of the game
-         * Pass in an array workerMoves where every element indicates what workerType is moving from what cell
+         * Uses this.workerMoves array where every element indicates what workerType is moving from what cell
          * For example: [{cellId: 1, workerType: "green"}, {cellId: 0, workerType: "camp"}]
          * Indicates that in cell 1 (labor), the green worker moves one cell and that 
          * in cell 0 (money), the camp worker moves one cell
@@ -97,7 +97,7 @@ class GameEngine{
             var cellId = this.workerMoves[i].cellId
             var workerType = this.workerMoves[i].workerType
             var resource = this.board.moveWorker(cellId, workerType)
-            resources[resource] += 1            
+            resources[resource] += 1
         }
         this.workerMoves = []
         this.curPlayer.money += resources['money']
@@ -115,6 +115,10 @@ class GameEngine{
     }
 
     laborForMoney(){
+        /**
+         * For the current player, trades 2 labor for 1 money
+         * Returns undefined if player doesn't have 2 labor
+         */
         if (this.curPlayer.labor < 2){
             return
         }
@@ -148,85 +152,94 @@ class GameEngine{
         document.getElementById('money').textContent = 'Money: '+ this.curPlayer.money
         document.getElementById('labor').textContent = 'Labor: '+ this.curPlayer.labor            
     }
-
 }
 
-var cellLocations = {
-    money: {
-        0: {x: 100, y: 200, occupied: true},
-        1: {x: 100, y: 270, occupied: false},
-        2: {x: 170, y: 270, occupied: false},
-    },
-    labor1: {
-        0: {x: 200, y: 100, occupied: true},
-        1: {x: 200, y: 170, occupied: false},
-        2: {x: 270, y: 170, occupied: false},
-    },
-    labor2: {
-        0: {x: 300, y: 200, occupied: true},
-        1: {x: 300, y: 270, occupied: false},
-        2: {x: 370, y: 270, occupied: false},
-    },
-    getNext: function(cur){
-        switch (cur){
-            case 'money': return 'labor1'
-            case 'labor1': return 'labor2'
-            case 'labor2': return 'money'
-            default: return undefined
-        }
-    },
-    getAvailable: function(cell){
+class UI {
+    constructor(){
+        this.cells = []
         for (var i=0; i<3; i++){
-            if (!this[cell][i].occupied){
-                return i;
+            var image = new Image(60,60)
+            image.src = 'green_worker_1.jpg'
+            image.style.position='absolute'
+            switch (i){
+                case 0:
+                    image.style.left = '100px'
+                    image.style.top = '200px'
+                    image.onclick = this.moveGreenWorkerCell0
+                    break
+                case 1:
+                    image.style.left = '200px'
+                    image.style.top = '100px'
+                    image.onclick = this.moveGreenWorkerCell1
+                    break
+                case 2:
+                    image.style.left = '300px'
+                    image.style.top = '200px'
+                    image.onclick = this.moveGreenWorkerCell2
+                    break
             }
+            this.cells.push({'green': {img: image, num: 1}})
+            gameDiv.appendChild(image)
         }
-        return 3;
+    }
+
+    moveWorker(cellId, workerType) {
+        /**
+         * Updates the current image in cellId[workerType] to refect a decrease in 
+         * the number of workers present in this cell, and updates (cellId+1)[workerType]
+         * image to reflect a new worker.
+         * E.g. if there were 2 green workers in cellId and 1 in cellId+1, then the image 
+         * of cellId will switch to green_worker_1.jpg, and the image in CellId+1 will
+         * switch to green_worker_2.jpg
+         * 0 workers is represented as a fully transparent image.
+         * TODO: it's not great the the current state of the board is stored both in this
+         *   class AND in the board class. Seems like data duplication, and might lead
+         *   to data divergence. Would be better if this UI method and class were more dumb. 
+         */
+        var image = ui.cells[cellId][workerType].img
+        if (ui.cells[cellId][workerType].num === 0){
+            return
+        }
+
+        // remove the specified worker from its current spot
+        var num_remaining = ui.cells[cellId][workerType].num - 1
+        if (num_remaining === 0){
+            image.style.opacity = 0  //make image transparent
+        } else {
+            image.src = workerType + '_worker_' + num_remaining + '.jpg'
+        }
+        ui.cells[cellId][workerType].num -= 1
+
+        // update the image of the target cell
+        var newCellId = (cellId + 1) % 3
+        var numHere = ui.cells[newCellId][workerType].num
+        if (numHere === 0){
+            ui.cells[newCellId][workerType].img.style.opacity = 1
+        } else {
+            var newNum = numHere + 1
+            ui.cells[newCellId][workerType].img.src = workerType+'_worker_'+newNum+'.jpg'
+        }
+        ui.cells[newCellId][workerType].num += 1
+
+        ge.addWorkerMove(workerType, cellId)
+    }
+
+    // TODO: replace this with partials/currying
+    moveGreenWorkerCell0(){
+        ui.moveWorker(0, "green")
+    }
+
+    moveGreenWorkerCell1(){
+        ui.moveWorker(1, "green")
+    }
+
+    moveGreenWorkerCell2(){
+        ui.moveWorker(2, "green")
     }
 }
 
 ge = new GameEngine()
-function createWorker(curCell) {
-    this.image = new Image(60,60)
-    this.image.workerType = 'green'
-    this.image.src = 'green_worker.jpg'
-    this.image.style.position='absolute'
-    this.image.style.left=cellLocations[curCell][0].x+"px"
-    this.image.style.top=cellLocations[curCell][0].y+"px"
-    this.image.curCell = curCell
-    this.image.cellId = 0
-    if (curCell === 'money'){
-        this.image.cellId = 0
-    } else if (curCell === 'labor1') {
-        this.image.cellId = 1
-    } else if (curCell === 'labor2') {
-        this.image.cellId = 2
-    }
-    
-    this.image.onclick = function(){
-        // clear currently occupied spot
-        var avail = cellLocations.getAvailable(this.curCell)
-        cellLocations[this.curCell][avail-1].occupied = false
-
-        // move image to next spot
-        this.curCell = cellLocations.getNext(this.curCell)
-        avail = cellLocations.getAvailable(this.curCell)
-        this.style.left = cellLocations[this.curCell][avail].x + "px"
-        this.style.top = cellLocations[this.curCell][avail].y + "px"
-        cellLocations[this.curCell][avail].occupied = true
-
-        ge.addWorkerMove(this.workerType, this.cellId)
-        this.cellId = (this.cellId + 1) % 3
-    }
-    gameDiv.appendChild(this.image)
-}
-
-
-greenWorkers.push(new createWorker('money'))
-greenWorkers.push(new createWorker('labor1'))
-greenWorkers.push(new createWorker('labor2'))
+ui = new UI()
 
 var gameOver = false
 var curPlayer = 0
-
-
