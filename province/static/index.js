@@ -40,13 +40,10 @@ class Building{
 
 class Board{
     constructor(){
-        this.buildings = []
-        this.buildings.push(new Building(2, 3, 1, 'Mill'))
-        this.buildings.push(new Building(5, 5, 2, 'Smithy'))
-        this.buildings.push(new Building(2, 3, 1, 'Camp'))
-        this.buildings.push(new Building(4, 4, 2, 'Village'))
-        this.buildings.push(new Building(4, 4, 1, 'Harbor'))
-
+        this.buildings = {
+            'mill': new Building(2, 3, 1, 'Mill'),
+            'camp': new Building(2, 3, 1, 'Camp')
+        }
         this.cells = []
         this.cells.push(new Cell('money'))
         this.cells.push(new Cell('labor'))
@@ -78,6 +75,9 @@ class GameEngine{
         this.curPlayer = this.players[this.curTurn]
 
         this.workerMoves = []
+        document.getElementById('player').textContent = 'Current Player: '+this.curPlayer.name
+        document.getElementById('money').textContent = 'Money: '+ this.curPlayer.money
+        document.getElementById('labor').textContent = 'Labor: '+ this.curPlayer.labor
     }
 
     commitWorkerMoves(){
@@ -100,6 +100,10 @@ class GameEngine{
             resources[resource] += 1            
         }
         this.workerMoves = []
+        this.curPlayer.money += resources['money']
+        this.curPlayer.labor += resources['labor']
+        document.getElementById('money').textContent = 'Money: '+ this.curPlayer.money
+        document.getElementById('labor').textContent = 'Labor: '+ this.curPlayer.labor
     }
 
     addWorkerMove(workerType, cellId) {
@@ -109,6 +113,42 @@ class GameEngine{
         } 
         this.workerMoves.push(workerMove)
     }
+
+    laborForMoney(){
+        if (this.curPlayer.labor < 2){
+            return
+        }
+        this.curPlayer.labor -= 2
+        this.curPlayer.money += 1
+        document.getElementById('money').textContent = 'Money: '+ this.curPlayer.money
+        document.getElementById('labor').textContent = 'Labor: '+ this.curPlayer.labor
+    }
+
+    passTurn(){
+        this.curPlayer.labor = 0
+        this.curTurn+=1
+        this.curPlayer = this.players[this.curTurn%2]
+        if (this.board.buildings['mill'].owners.includes(this.curPlayer.name)){
+            this.curPlayer.labor+=1
+        }
+        document.getElementById('player').textContent = 'Current Player: '+this.curPlayer.name
+        document.getElementById('money').textContent = 'Money: '+ this.curPlayer.money
+        document.getElementById('labor').textContent = 'Labor: '+ this.curPlayer.labor
+    }
+
+    build(building){
+        // check that player has enough resources
+        if (this.curPlayer.labor < this.board.buildings[building].lcost ||
+            this.curPlayer.money < this.board.buildings[building].mcost) {
+                return;
+            }
+        this.board.buildings[building].owners.push(this.curPlayer.name)
+        this.curPlayer.money -= this.board.buildings[building].mcost
+        this.curPlayer.labor -= this.board.buildings[building].lcost
+        document.getElementById('money').textContent = 'Money: '+ this.curPlayer.money
+        document.getElementById('labor').textContent = 'Labor: '+ this.curPlayer.labor            
+    }
+
 }
 
 var cellLocations = {

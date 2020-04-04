@@ -10,6 +10,17 @@
 <canvas id="gameCanvas" width="480" height="400" style="background: url('./board.jpg'); background-size: 480px 400px;"  ></canvas>
 <div id='console'>
     <button type="button" onclick="ge.commitWorkerMoves()">Collect Resources</button>
+    <div id='resources'>
+        <p id='player'>Current player: Player 1</p>
+        <p id='money'>Money: 0</p>
+        <p id='labor'>Labor: 0</p>
+    </div>
+    <div id='build'>
+        <button type="button" onclick="ge.build('mill')">Build Mill</button>
+        <button type="button" onclick="ge.build('camp')">Build Camp</button>
+    </div>
+    <button type="button" onclick="ge.passTurn()">End Turn</button>
+    <button type="button" onclick="ge.laborForMoney()">Trade 2 labor for 1 money</button>
 </div>
 <script src='index.js'></script>
 
